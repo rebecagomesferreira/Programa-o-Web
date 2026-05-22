@@ -1,30 +1,65 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const path = require('path');
+const mysql = require('mysql2');//isso pegara a versão mais atual do mysql que instalamos
+const cors = require("cors");
 
-// Configurando o Express para usar arquivos estáticos (HTML, CSS, JavaScript)
-app.use(express.static(path.join(__dirname, 'public')));
+const db = mysql.createPool({
+    host:"localhost",
+    user:"root",
+    port:3307,
+    password:"catolica",
+    database:"appsexta",
 
-let lista = [];
+})
 
-// Rota para a página inicial
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+
+/*app.get("/",(req, res)=>{ //primeira rota para saber se o banco está funcionando
+    let SQL = "INSERT INTO alunos (id,nome, idade) VALUES (null,'Maria','28')";
+    db.query(SQL,(err,result)=>{
+        console.log(err);
+    });
+}) */
+
+app.get("/listar", (req, res) => { 
+    let SQL = "SELECT * FROM alunos";
+    db.query(SQL, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ error: "Erro ao listar alunos" });
+        } else {
+            res.json(result); // Enviar os dados dos alunos como resposta
+        }
+    });
 });
 
-// Rota para a soma
-app.get('/somar', (req, res) => {
-    // Recuperando os números enviados pelo formulário
-    const salario = parseFloat(req.query.salario);
+app.delete("/excluir/:id", (req, res) => {
+    const alunoId = req.params.id;
+   // Execute uma consulta SQL para excluir o aluno com base no ID
+    const SQL = "DELETE FROM alunos WHERE id = ?";
+    db.query(SQL, [alunoId], (err, result) => {
+      if (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao excluir aluno" });
+      } else {
+        res.json({ message: "Aluno excluído com sucesso" });
+      }
+    });
+  });
+
+app.use(cors());
+app.use(express.json());
+
+app.post("/register",(req, res)=>{
+    const {nome} = req.body;
+    const {idade} = req.body;
+ 
+    let SQL = "INSERT INTO alunos(nome,idade) VALUES (?,?)";
     
-    lista.push(salario);
-    const maior = Math.max(...lista);
+    db.query(SQL,[nome,idade],(err, result)=>{
+         console.log(err);
+    })
+ });
 
-     res.send(`O maior salário é ${maior} <br> Lista de salários: ${lista.join(', ')}`);
-   
+app.listen(3001,()=>{
+    console.log("rodando servidor");
 });
-
-// Iniciando o servidor na porta 3000
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na
-porta ${PORT}`));
